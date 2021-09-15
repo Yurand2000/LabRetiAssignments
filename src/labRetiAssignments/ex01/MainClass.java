@@ -1,6 +1,6 @@
 package labRetiAssignments.ex01;
 
-public class Main
+public class MainClass
 {
 	private static double accuracy = 0.0;
 	private static long max_time = 0L;
