@@ -2,9 +2,17 @@ package labRetiAssignments.ex02;
 
 public class MainClass {
 
+	private static int clienti = 50;
+	
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+		UfficioPostale ufficio = new UfficioPostale();
+		
+		ufficio.apriUfficioPostale();		
+		for(int i = 0; i < clienti; i++)
+		{
+			ufficio.entraUnNuovoCliente();
+		}		
+		//ufficio.chiudiUfficioPostale();
 	}
 
 }
