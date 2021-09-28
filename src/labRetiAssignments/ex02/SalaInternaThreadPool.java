@@ -1,33 +1,53 @@
 package labRetiAssignments.ex02;
 
 import java.util.concurrent.*;
+import java.util.concurrent.locks.*;
 
 public class SalaInternaThreadPool extends ThreadPoolExecutor {
-	BlockingDeque<Runnable> coda_esterna;
-	Thread thread_riempi_fila;
+	int coda_interna_counter;
+	int coda_interna_max;
+	Lock counter_lock;
+	Condition counter_lock_condition;
 	
-	public SalaInternaThreadPool(int sportelli, int lunghezza_coda_interna, BlockingDeque<Runnable> coda_esterna)
+	public SalaInternaThreadPool(int sportelli, int lunghezza_coda_interna)
 	{		
 		super(sportelli, sportelli, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(lunghezza_coda_interna));
-		this.coda_esterna = coda_esterna;
-		this.thread_riempi_fila = new Thread(new RiempiFilaInternaRunnable(coda_esterna, this));
-		this.thread_riempi_fila.start();
+		coda_interna_counter = 0;
+		coda_interna_max = lunghezza_coda_interna;
+		counter_lock = new ReentrantLock();
+		counter_lock_condition = counter_lock.newCondition();
 	}
 	
 	@Override
-	public void beforeExecute(Thread t, Runnable r)
+	public void afterExecute(Runnable r, Throwable t)
 	{
-		Runnable riempi_fila_runnable = new RiempiFilaInternaRunnable(coda_esterna, this);
-		if(coda_esterna.isEmpty())
-		{
-			thread_riempi_fila = new Thread(riempi_fila_runnable);
-			thread_riempi_fila.start();
-		}
-		else
-		{
-			riempi_fila_runnable.run();
-		}
+		counter_lock.lock();
+		coda_interna_counter--;
+		counter_lock_condition.signal();
+		counter_lock.unlock();
 		
-		super.beforeExecute(t, r);
+		
+		super.afterExecute(r, t);
+	}
+	
+	public void executeBlocking(Runnable r)
+	{
+		counter_lock.lock();
+		try
+		{
+			while(!(coda_interna_counter < coda_interna_max))
+				counter_lock_condition.await();
+
+			super.execute(r);
+			coda_interna_counter++;
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			counter_lock.unlock();
+		}
 	}
 }

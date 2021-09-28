@@ -11,8 +11,8 @@ public class MainClass {
 		for(int i = 0; i < clienti; i++)
 		{
 			ufficio.entraUnNuovoCliente();
-		}		
-		//ufficio.chiudiUfficioPostale();
+		}
+		ufficio.chiudiUfficioPostale();
 	}
 
 }

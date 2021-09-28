@@ -1,13 +1,17 @@
 package labRetiAssignments.ex02;
 
-import java.util.concurrent.*;
 
 public class SalaInterna {
 	SalaInternaThreadPool sportelli;
 	
-	public SalaInterna(int sportelli, int lunghezza_coda_interna, BlockingDeque<Runnable> coda_esterna)
+	public SalaInterna(int sportelli, int lunghezza_coda_interna)
 	{
-		this.sportelli = new SalaInternaThreadPool(sportelli, lunghezza_coda_interna, coda_esterna);
+		this.sportelli = new SalaInternaThreadPool(sportelli, lunghezza_coda_interna);
+	}
+	
+	public void aggiungiInSalaInternaBloccante(Runnable r)
+	{
+		sportelli.executeBlocking(r);
 	}
 	
 	public void chiudiSalaInterna()
