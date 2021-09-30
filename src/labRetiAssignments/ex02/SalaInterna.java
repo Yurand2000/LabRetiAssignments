@@ -14,7 +14,7 @@ public class SalaInterna {
 		sportelli.executeBlocking(r);
 	}
 	
-	public void chiudiSalaInterna()
+	public void processaUltimiClientiEChiudiSalaInterna()
 	{
 		sportelli.shutdown();
 	}

@@ -4,50 +4,76 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
 
 public class SalaInternaThreadPool extends ThreadPoolExecutor {
-	int coda_interna_counter;
-	int coda_interna_max;
-	Lock counter_lock;
-	Condition counter_lock_condition;
+	private int contatore_coda_interna;
+	private int lunghezza_coda_interna;
+	private Lock mutex_contatore;
+	private Condition condition_variable_contatore;
 	
 	public SalaInternaThreadPool(int sportelli, int lunghezza_coda_interna)
 	{		
 		super(sportelli, sportelli, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(lunghezza_coda_interna));
-		coda_interna_counter = 0;
-		coda_interna_max = lunghezza_coda_interna;
-		counter_lock = new ReentrantLock();
-		counter_lock_condition = counter_lock.newCondition();
+		
+		this.contatore_coda_interna = 0;
+		this.lunghezza_coda_interna = lunghezza_coda_interna;
+		this.mutex_contatore = new ReentrantLock();
+		this.condition_variable_contatore = mutex_contatore.newCondition();
 	}
 	
 	@Override
 	public void afterExecute(Runnable r, Throwable t)
 	{
-		counter_lock.lock();
-		coda_interna_counter--;
-		counter_lock_condition.signal();
-		counter_lock.unlock();
-		
+		doWhileLocked( () ->
+		{
+			decrementaContatoreESegnala();
+		});
 		
 		super.afterExecute(r, t);
 	}
 	
 	public void executeBlocking(Runnable r)
 	{
-		counter_lock.lock();
-		try
+		doWhileLocked( () ->
 		{
-			while(!(coda_interna_counter < coda_interna_max))
-				counter_lock_condition.await();
+			try
+			{
+				while(codaInternaPiena())
+					aspettaUnSegnaleSulMutex();
 
-			super.execute(r);
-			coda_interna_counter++;
-		}
-		catch (InterruptedException e)
-		{
-			e.printStackTrace();
-		}
-		finally
-		{
-			counter_lock.unlock();
-		}
+				super.execute(r);
+				incrementaContatore();
+			}
+			catch (InterruptedException e)
+			{
+				e.printStackTrace();
+			}
+		});
+	}
+	
+	private void doWhileLocked(Runnable f)
+	{
+		mutex_contatore.lock();
+		f.run();
+		mutex_contatore.unlock();
+	}
+	
+	private void decrementaContatoreESegnala()
+	{
+		contatore_coda_interna--;
+		condition_variable_contatore.signal();
+	}
+	
+	private void incrementaContatore()
+	{
+		contatore_coda_interna++;
+	}
+	
+	private boolean codaInternaPiena()
+	{
+		return !(contatore_coda_interna < lunghezza_coda_interna);
+	}
+	
+	private void aspettaUnSegnaleSulMutex() throws InterruptedException
+	{
+		condition_variable_contatore.await();
 	}
 }
