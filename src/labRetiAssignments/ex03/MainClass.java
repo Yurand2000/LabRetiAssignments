@@ -3,8 +3,8 @@ package labRetiAssignments.ex03;
 import java.util.*;
 
 public class MainClass {
-	private final static int numero_studenti = 100;
-	private final static int numero_tesisti = 20;
+	private final static int numero_studenti = 20;
+	private final static int numero_tesisti = 10;
 	private final static int numero_professori = 5;
 	private final static int numero_computer = 20;
 	private final static int numero_computer_tesisti = 7;
@@ -14,24 +14,33 @@ public class MainClass {
 		Laboratorio lab = new Laboratorio(numero_computer, numero_computer_tesisti);
 		List<Thread> threads = new ArrayList<Thread>();
 		
-		for(int i = 0; i < numero_studenti; i++)
-			threads.add(new Thread(Utente.creaStudente(lab)));
+		CreaUtentiLaboratorio(lab, threads);
+		AttivaThreadUtenti(threads);
+	}
+	
+	private static void CreaUtentiLaboratorio(Laboratorio lab, List<Thread> threads)
+	{
+		for(int i = 0; i < numero_professori; i++)
+			threads.add(new Thread(Utente.creaProfessore(lab)));
 		
 		for(int i = 0; i < numero_tesisti; i++)
 			threads.add(new Thread(Utente.creaTesista(lab)));
 		
-		for(int i = 0; i < numero_professori; i++)
-			threads.add(new Thread(Utente.creaProfessore(lab)));
-
-		Collections.shuffle(threads);
+		for(int i = 0; i < numero_studenti; i++)
+			threads.add(new Thread(Utente.creaStudente(lab)));
 		
+		Collections.shuffle(threads);
+	}
+	
+	private static void AttivaThreadUtenti(List<Thread> threads)
+	{
 		try
 		{
 			for(Thread t : threads)
 				t.start();
 			
 			for(Thread t : threads)
-					t.join();
+				t.join();
 		}
 		catch (InterruptedException e)
 		{
