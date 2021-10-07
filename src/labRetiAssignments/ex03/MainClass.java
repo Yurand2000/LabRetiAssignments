@@ -7,11 +7,10 @@ public class MainClass {
 	private final static int numero_tesisti = 10;
 	private final static int numero_professori = 5;
 	private final static int numero_computer = 20;
-	private final static int numero_computer_tesisti = 7;
 
 	public static void main(String[] args)
 	{
-		Laboratorio lab = new Laboratorio(numero_computer, numero_computer_tesisti);
+		Laboratorio lab = new Laboratorio(numero_computer);
 		List<Thread> threads = new ArrayList<Thread>();
 		
 		CreaUtentiLaboratorio(lab, threads);
@@ -21,13 +20,13 @@ public class MainClass {
 	private static void CreaUtentiLaboratorio(Laboratorio lab, List<Thread> threads)
 	{
 		for(int i = 0; i < numero_professori; i++)
-			threads.add(new Thread(Utente.creaProfessore(lab)));
+			threads.add(new Thread(  Utente.creaProfessore(lab)  ));
 		
 		for(int i = 0; i < numero_tesisti; i++)
-			threads.add(new Thread(Utente.creaTesista(lab)));
+			threads.add(new Thread(  Utente.creaTesista( lab, (int)(Math.random() * numero_computer) )  ));
 		
 		for(int i = 0; i < numero_studenti; i++)
-			threads.add(new Thread(Utente.creaStudente(lab)));
+			threads.add(new Thread(  Utente.creaStudente(lab)  ));
 		
 		Collections.shuffle(threads);
 	}

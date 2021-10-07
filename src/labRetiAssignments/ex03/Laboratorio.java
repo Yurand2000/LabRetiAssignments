@@ -3,30 +3,13 @@ package labRetiAssignments.ex03;
 import java.util.concurrent.locks.*;
 
 public class Laboratorio {
-	//variabili read-only
-	final int indice_pc_tesisti;
-
-	//variabili da gestire in mutua esclusione	
-	final ReadWriteLock mutexAccessoLaboratorio;
+	final ReadWriteLock mutexAccessoLaboratorio;	
+	final Tutor tutor;
 	
-	final Lock mutexDatiLaboratorio;
-	final Condition conditionPcTesistiOccupato;
-	final Condition conditionPcTuttiOccupati;
-	int tesistiInAttesa;
-	final ComputerLaboratorio computers;
-	
-	public Laboratorio(int numero_computer, int indice_pc_tesisti)
-	{
-		this.indice_pc_tesisti = indice_pc_tesisti;
-		
+	public Laboratorio(int numero_computer)
+	{		
 		mutexAccessoLaboratorio = new WriterPriorityReadWriteLock();
-		
-		mutexDatiLaboratorio = new ReentrantLock(true);
-		conditionPcTesistiOccupato = mutexDatiLaboratorio.newCondition();
-		conditionPcTuttiOccupati = mutexDatiLaboratorio.newCondition();
-		
-		tesistiInAttesa = 0;
-		computers = new ComputerLaboratorio(numero_computer);
+		tutor = new Tutor(numero_computer);
 	}
 	
 	public void Entra(Utente u) throws InterruptedException
@@ -44,73 +27,43 @@ public class Laboratorio {
 	private void EntraProfessore(Utente u)
 	{
 		OttieniMutexProfessore();
-		System.out.printf("Professore n. %02d entra.\n", u.matricolaUtente());
+		StampaUtenteEntra(u);
 	}
 	
 	private void EntraTesista(Utente u) throws InterruptedException
 	{
-		BloccaPCTesista(u);
+		tutor.BloccaPCTesista(u);
 		OttieniMutexStudente();
-		System.out.printf("Tesista n. %02d entra.\n", u.matricolaUtente());
-	}
-	
-	private void BloccaPCTesista(Utente u) throws InterruptedException
-	{
-		mutexDatiLaboratorio.lock();
-		
-		tesistiInAttesa++;
-		while(!computers.computerLibero(indice_pc_tesisti))
-			AspettaPcTesisti();
-		tesistiInAttesa--;
-		computers.occupa(indice_pc_tesisti, u);
-		
-		mutexDatiLaboratorio.unlock();
-	}
-	
-	private void AspettaPcTesisti() throws InterruptedException
-	{
-		conditionPcTesistiOccupato.await();
+		StampaUtenteEntra(u);
 	}
 	
 	private void EntraStudente(Utente u) throws InterruptedException
 	{
-		BloccaPCStudente(u);
+		tutor.BloccaPCStudente(u);
 		OttieniMutexStudente();
-		System.out.printf("Studente n. %02d entra.\n", u.matricolaUtente());
+		StampaUtenteEntra(u);
 	}
 	
-	private void BloccaPCStudente(Utente u) throws InterruptedException
+	private synchronized void StampaUtenteEntra(Utente u)
 	{
-		mutexDatiLaboratorio.lock();
-		int pc_libero = OttieniIndicePcLibero();
-		while(pc_libero == -1)
-		{
-			AspettaPcLibero();
-			pc_libero = OttieniIndicePcLibero();
-		}
-		computers.occupa(pc_libero, u);
-		mutexDatiLaboratorio.unlock();
+		if(u.tipoUtente() == UtentiLaboratorio.Professore)
+			System.out.printf("Professore n. %02d entra.\n", u.matricolaUtente());
+		else if(u.tipoUtente() == UtentiLaboratorio.Tesista)
+			System.out.printf("Tesista n. %02d entra.\n", u.matricolaUtente());
+		else if(u.tipoUtente() == UtentiLaboratorio.Studente)
+			System.out.printf("Studente n. %02d entra.\n", u.matricolaUtente());
+		else
+			throw new RuntimeException();
 	}
 	
-	private void AspettaPcLibero() throws InterruptedException
+	private void OttieniMutexProfessore()
 	{
-		conditionPcTuttiOccupati.await();
+		mutexAccessoLaboratorio.writeLock().lock();
 	}
 	
-	private int OttieniIndicePcLibero()
+	private void OttieniMutexStudente()
 	{
-		int pc_libero = -1;
-		for(int i = 0; (i < computers.totaleComputer()) && (pc_libero == -1); i++)
-		{			
-			if(computers.computerLibero(i) && !EscludiPcTesisti(i))
-				pc_libero = i;
-		}
-		return pc_libero;
-	}
-	
-	private boolean EscludiPcTesisti(int indice_pc_corrente)
-	{
-		return indice_pc_tesisti == indice_pc_corrente && tesistiInAttesa > 0;
+		mutexAccessoLaboratorio.readLock().lock();
 	}
 	
 	public void Esci(Utente u) throws InterruptedException
@@ -127,65 +80,39 @@ public class Laboratorio {
 	
 	private void EsceProfessore(Utente u)
 	{
-		System.out.printf("Professore n. %02d esce.\n", u.matricolaUtente());
+		StampaUtenteEsce(u);
 		RilasciaMutexProfessore();
 	}
 	
 	private void EsceTesista(Utente u)
 	{
-		System.out.printf("Tesista n. %02d esce.\n", u.matricolaUtente());
+		StampaUtenteEsce(u);
 		RilasciaMutexStudente();
-		SbloccaPCUtente(u);
+		tutor.SbloccaPCUtente(u);
 	}
 	
 	private void EsceStudente(Utente u)
 	{
-		System.out.printf("Studente n. %02d esce.\n", u.matricolaUtente());
+		StampaUtenteEsce(u);
 		RilasciaMutexStudente();
-		SbloccaPCUtente(u);
+		tutor.SbloccaPCUtente(u);
 	}
 	
-	private void SbloccaPCUtente(Utente u)
+	private synchronized void StampaUtenteEsce(Utente u)
 	{
-		mutexDatiLaboratorio.lock();
-		boolean found = false;
-		for(int i = 0; i < computers.totaleComputer() && !found; i++)
-		{
-			if(computers.utenteAlComputer(i, u))
-			{
-				computers.libera(i);
-				SegnalaPCLibero();
-				if(indice_pc_tesisti == i)
-					SegnalaPCTesistiLibero();
-				found = true;
-			}
-		}
-		mutexDatiLaboratorio.unlock();
-	}
-	
-	private void SegnalaPCLibero()
-	{
-		conditionPcTuttiOccupati.signal();
-	}
-	
-	private void SegnalaPCTesistiLibero()
-	{
-		conditionPcTesistiOccupato.signal();
-	}
-	
-	private void OttieniMutexProfessore()
-	{
-		mutexAccessoLaboratorio.writeLock().lock();
+		if(u.tipoUtente() == UtentiLaboratorio.Professore)
+			System.out.printf("Professore n. %02d esce.\n", u.matricolaUtente());
+		else if(u.tipoUtente() == UtentiLaboratorio.Tesista)
+			System.out.printf("Tesista n. %02d esce.\n", u.matricolaUtente());
+		else if(u.tipoUtente() == UtentiLaboratorio.Studente)
+			System.out.printf("Studente n. %02d esce.\n", u.matricolaUtente());
+		else
+			throw new RuntimeException();
 	}
 	
 	private void RilasciaMutexProfessore()
 	{
 		mutexAccessoLaboratorio.writeLock().unlock();
-	}
-	
-	private void OttieniMutexStudente()
-	{
-		mutexAccessoLaboratorio.readLock().lock();
 	}
 	
 	private void RilasciaMutexStudente()
