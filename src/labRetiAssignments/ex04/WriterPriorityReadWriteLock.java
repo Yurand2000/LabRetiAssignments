@@ -1,4 +1,4 @@
-package labRetiAssignments.ex03;
+package labRetiAssignments.ex04;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.*;
@@ -7,9 +7,9 @@ public class WriterPriorityReadWriteLock implements ReadWriteLock {
 	final ReadLock readLock;
 	final WriteLock writeLock;
 
-	final Lock lock;
-	final Condition readingCondition;
-	final Condition writingCondition;
+	final Object lock;
+	final Object readingCondition;
+	final Object writingCondition;
 	
 	int readersCount;
 	int waitingWritersCount;
@@ -20,9 +20,9 @@ public class WriterPriorityReadWriteLock implements ReadWriteLock {
 		readLock = new ReadLock();
 		writeLock = new WriteLock();
 		
-		lock = new ReentrantLock(true);
-		readingCondition = lock.newCondition();
-		writingCondition = lock.newCondition();
+		lock = new Object();
+		readingCondition = new Object();
+		writingCondition = new Object();
 		
 		readersCount = 0;
 		waitingWritersCount = 0;
@@ -52,23 +52,51 @@ public class WriterPriorityReadWriteLock implements ReadWriteLock {
 		@Override
 		public void lockInterruptibly() throws InterruptedException
 		{
-			lock.lock();
-			while(isWriterActive || waitingWritersCount > 0)
-				readingCondition.await();
-			readersCount++;
-			lock.unlock();
+			while(consumerWait())
+			{
+				synchronized(readingCondition) { readingCondition.wait(); }
+			}
+			increaseReadersCount();
+		}
+		
+		private boolean consumerWait()
+		{
+			boolean do_wait = false;
+			synchronized(lock)
+			{
+				do_wait = isWriterActive || waitingWritersCount > 0;
+			}
+			return do_wait;
+		}
+		
+		private void increaseReadersCount()
+		{
+			synchronized(lock)
+			{
+				readersCount++;
+			}
 		}
 		
 		@Override
 		public void unlock()
 		{
-			lock.lock();
-			readersCount--;
-			if(readersCount == 0)
-				writingCondition.signal();
-			lock.unlock();
+			synchronized(lock)
+			{
+				readersCount--;
+				if(readersCount == 0)
+				{
+					signalNoMoreReaders();
+				}
+			}
 		}
 
+		private void signalNoMoreReaders()
+		{
+			synchronized(writingCondition)
+			{
+				writingCondition.notify();
+			}
+		}
 
 		//NOT IMPLEMENTED FUNCTIONS OF LOCK INTERFACE
 		@Override
@@ -97,25 +125,68 @@ public class WriterPriorityReadWriteLock implements ReadWriteLock {
 		@Override
 		public void lockInterruptibly() throws InterruptedException
 		{
-			lock.lock();
-			waitingWritersCount++;
-			while(readersCount > 0 || isWriterActive)
-				writingCondition.await();
-			waitingWritersCount--;
-			isWriterActive = true;
-			lock.unlock();
+			increaseWritersInQueueCount();
+			while(producerWait())
+			{
+				synchronized(writingCondition) { writingCondition.wait(); }
+			}
+			decreaseWritersInQueueCount();
+		}
+		
+		private void increaseWritersInQueueCount()
+		{
+			synchronized(lock)
+			{
+				waitingWritersCount++;
+			}
+		}
+		
+		private boolean producerWait()
+		{
+			boolean do_wait = false;
+			synchronized(lock)
+			{
+				do_wait = readersCount > 0 || isWriterActive;
+			}
+			return do_wait;
+		}
+		
+		private void decreaseWritersInQueueCount()
+		{
+			synchronized(lock)
+			{
+				waitingWritersCount--;
+				isWriterActive = true;
+			}
 		}
 
 		@Override
 		public void unlock()
 		{
-			lock.lock();
-			isWriterActive = false;
-			if(waitingWritersCount > 0)
-				writingCondition.signal();
-			else
-				readingCondition.signalAll();
-			lock.unlock();
+			synchronized(lock)
+			{
+				isWriterActive = false;
+				if(waitingWritersCount > 0)
+					signalNextWriter();
+				else
+					signalAllReaders();
+			}
+		}
+		
+		private void signalNextWriter()
+		{
+			synchronized(writingCondition)
+			{
+				writingCondition.notify();
+			}
+		}
+		
+		private void signalAllReaders()
+		{
+			synchronized(readingCondition)
+			{
+				readingCondition.notifyAll();
+			}
 		}
 
 		//NOT IMPLEMENTED FUNCTIONS OF LOCK INTERFACE
