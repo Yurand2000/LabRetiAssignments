@@ -3,7 +3,7 @@ package labRetiAssignments.ex04;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.*;
 
-public class WriterPriorityReadWriteLock implements ReadWriteLock {
+public class WriterPriorityReadWriteLock_MonitorImplementation implements ReadWriteLock {
 	final ReadLock readLock;
 	final WriteLock writeLock;
 
@@ -15,7 +15,7 @@ public class WriterPriorityReadWriteLock implements ReadWriteLock {
 	int waitingWritersCount;
 	boolean isWriterActive;
 	
-	public WriterPriorityReadWriteLock()
+	public WriterPriorityReadWriteLock_MonitorImplementation()
 	{
 		readLock = new ReadLock();
 		writeLock = new WriteLock();

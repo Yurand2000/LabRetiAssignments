@@ -8,7 +8,7 @@ public class Laboratorio {
 	
 	public Laboratorio(int numero_computer)
 	{		
-		mutexAccessoLaboratorio = new WriterPriorityReadWriteLock(); //implementata utilizzando solo construtti monitor
+		mutexAccessoLaboratorio = new WriterPriorityReadWriteLock_MonitorImplementation(); //implementata utilizzando solo construtti monitor
 		tutor = new Tutor(numero_computer);
 	}
 	

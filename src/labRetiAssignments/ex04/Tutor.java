@@ -1,26 +1,20 @@
 package labRetiAssignments.ex04;
 
 import java.util.*;
-import java.util.concurrent.locks.*;
 
 public class Tutor {
-	final Lock mutex;
-	final Condition conditionPcTuttiOccupati;
-	final List<Condition> listaConditionPcOccupato;
+	final Object mutex;
 	final List<Integer> listaNumeroTesistiInAttesa;
 	final ComputerLaboratorio computers;
 	
 	public Tutor(int numero_computer)
 	{
-		mutex = new LockUsingMonitor();
-		conditionPcTuttiOccupati = mutex.newCondition();
+		mutex = new Object();
 
 		computers = new ComputerLaboratorio(numero_computer);
 		listaNumeroTesistiInAttesa = new ArrayList<Integer>();
-		listaConditionPcOccupato = new ArrayList<Condition>();
 		for(int i = 0; i < numero_computer; i++)
 		{
-			listaConditionPcOccupato.add(mutex.newCondition());
 			listaNumeroTesistiInAttesa.add(0);
 		}
 	}
@@ -28,16 +22,15 @@ public class Tutor {
 	
 	public void BloccaPCTesista(Utente u) throws InterruptedException
 	{
-		mutex.lock();
-		
-		int indice_pc = u.indiceComputerSpecifico();
-		IncrementaTesistiInAttesa(indice_pc);
-		while(!computers.computerLibero(indice_pc))
-			AspettaPcTesisti(indice_pc);
-		DecrementaTesistiInAttesa(indice_pc);
-		computers.occupa(indice_pc, u);
-		
-		mutex.unlock();
+		synchronized(mutex)
+		{
+			int indice_pc = u.indiceComputerSpecifico();
+			IncrementaTesistiInAttesa(indice_pc);
+			while(!computers.computerLibero(indice_pc))
+				AspettaPcTesisti(indice_pc);
+			DecrementaTesistiInAttesa(indice_pc);
+			computers.occupa(indice_pc, u);
+		}
 	}
 	
 	private void IncrementaTesistiInAttesa(int indice_pc)
@@ -52,27 +45,26 @@ public class Tutor {
 	
 	private void AspettaPcTesisti(int indice_pc) throws InterruptedException
 	{
-		listaConditionPcOccupato.get(indice_pc).await();
+		mutex.wait();
 	}
 	
 	public void BloccaPCStudente(Utente u) throws InterruptedException
 	{
-		mutex.lock();
-		
-		int pc_libero = OttieniIndicePcLibero();
-		while(pc_libero == -1)
+		synchronized(mutex)
 		{
-			AspettaPcLibero();
-			pc_libero = OttieniIndicePcLibero();
+			int pc_libero = OttieniIndicePcLibero();
+			while(pc_libero == -1)
+			{
+				AspettaPcLibero();
+				pc_libero = OttieniIndicePcLibero();
+			}
+			computers.occupa(pc_libero, u);
 		}
-		computers.occupa(pc_libero, u);
-		
-		mutex.unlock();
 	}
 	
 	private void AspettaPcLibero() throws InterruptedException
 	{
-		conditionPcTuttiOccupati.await();
+		mutex.wait();
 	}
 	
 	private int OttieniIndicePcLibero()
@@ -93,28 +85,29 @@ public class Tutor {
 	
 	public void SbloccaPCUtente(Utente u)
 	{
-		mutex.lock();
-		boolean found = false;
-		for(int i = 0; i < computers.totaleComputer() && !found; i++)
+		synchronized(mutex)
 		{
-			if(computers.utenteAlComputer(i, u))
+			boolean found = false;
+			for(int i = 0; i < computers.totaleComputer() && !found; i++)
 			{
-				computers.libera(i);
-				SegnalaPCLibero();
-				SegnalaPCTesistiLibero(i);
-				found = true;
+				if(computers.utenteAlComputer(i, u))
+				{
+					computers.libera(i);
+					SegnalaPCLibero();
+					SegnalaPCTesistiLibero(i);
+					found = true;
+				}
 			}
 		}
-		mutex.unlock();
 	}
 	
 	private void SegnalaPCLibero()
 	{
-		conditionPcTuttiOccupati.signal();
+		mutex.notifyAll();
 	}
 	
 	private void SegnalaPCTesistiLibero(int indice_pc)
 	{
-		listaConditionPcOccupato.get(indice_pc).signal();
+		mutex.notifyAll();
 	}
 }
