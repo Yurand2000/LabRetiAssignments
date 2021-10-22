@@ -8,6 +8,9 @@ public class Consumer implements Runnable
 
 	public Consumer(SynchronizedLinkedQueue<String> queue)
 	{
+		if(queue == null)
+			throw new NullPointerException("Given queue is null.");
+		
 		this.queue = queue;
 	}
 	
@@ -16,36 +19,65 @@ public class Consumer implements Runnable
 	{
 		try
 		{
-			File curr_dir = null;
 			while(!Thread.currentThread().isInterrupted())
 			{
-				curr_dir = new File(queue.pop());
-				printFileTree(curr_dir);
+				printFileTree(popFileFromQueue());
 			}
 		}
-		catch (InterruptedException e) { }	
+		catch (InterruptedException e) {
+			
+		}
+		catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+	}
+	
+	private File popFileFromQueue() throws InterruptedException
+	{
+		return new File(queue.pop());
 	}
 	
 	private void printFileTree(File curr_dir)
 	{
 		StringBuffer file_tree = new StringBuffer();
-		if(!curr_dir.exists() || !curr_dir.isDirectory())
+		if(!isValidDirectory(curr_dir))
 		{
-			throw new RuntimeException();
+			throw new RuntimeException("Unexpected exception, directory " +
+				curr_dir.getPath() + " is no longer valid!");
 		}
 		
-		file_tree.append(curr_dir.getPath() + '\n');
+		appendDirNameToOutputString(file_tree, curr_dir);
 		for(File sub_file : curr_dir.listFiles())
 		{
-			if(sub_file.isFile())
-			{
-				file_tree.append((sub_file.getName() + '\n').indent(2));
-			}
+			appendFileNameToOutputString(file_tree, sub_file);
 		}
 		
+		printFileTreeToConsole(file_tree);
+	}
+	
+	private boolean isValidDirectory(File dir)
+	{
+		return dir.exists() && dir.isDirectory();
+	}
+	
+	private void appendDirNameToOutputString(StringBuffer buf, File dir)
+	{
+		buf.append(dir.getPath() + '\n');
+	}
+	
+	private void appendFileNameToOutputString(StringBuffer buf, File file)
+	{
+		if(file.isFile())
+		{
+			buf.append("  " + file.getName() + '\n');
+		}
+	}
+	
+	private void printFileTreeToConsole(StringBuffer s)
+	{
 		synchronized(System.out.getClass())
 		{
-			System.out.print(file_tree.toString());
+			System.out.print(s.toString());
 		}
 	}
 }

@@ -13,10 +13,10 @@ public class MainClass {
 	
 	public static void main(String[] args) {
 		
-		//main_dir = new File(args[0]);
-		main_dir = new File(".");
-		if(!checkDirectoryValid(main_dir))
+		main_dir = new File(args[0]);
+		if(!isDirectoryValid(main_dir))
 		{
+			System.err.println("Given directory is not valid.");
 			return;
 		}
 		
@@ -36,9 +36,9 @@ public class MainClass {
 		}
 	}
 
-	private static boolean checkDirectoryValid(File main_dir)
+	private static boolean isDirectoryValid(File dir)
 	{
-		return main_dir.exists() && main_dir.isDirectory();
+		return dir.exists() && dir.isDirectory();
 	}
 	
 	private static void spawnAndStartThreads()
