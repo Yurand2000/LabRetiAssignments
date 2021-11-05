@@ -6,14 +6,16 @@ import java.util.concurrent.*;
 
 public class ServerHandler implements Runnable
 {
-	String cwd;
+	String current_working_dir;
+	InetSocketAddress listening_address;
 	ServerSocket listening_socket;
 	Thread listening_thread;
 	ThreadPoolExecutor thread_pool;
 	
-	public ServerHandler(String cwd) throws IOException
+	public ServerHandler(String cwd, String address, int port) throws IOException
 	{
-		this.cwd = cwd;
+		current_working_dir = cwd;
+		listening_address = new InetSocketAddress(address, port);
 		listening_thread = null;
 		listening_socket = new ServerSocket();
 		thread_pool = (ThreadPoolExecutor)Executors.newCachedThreadPool();
@@ -21,16 +23,17 @@ public class ServerHandler implements Runnable
 	
 	public void start() throws IOException
 	{
-		System.out.println("Starting Server");
 		listening_thread = new Thread(this);
 		listening_thread.start();
+		System.out.println("** Server started. **");
 	}
 	
 	public void stop() throws IOException, InterruptedException
 	{
-		System.out.println("Stopping Server");
 		listening_socket.close();
 		listening_thread.join();
+		thread_pool.shutdown();
+		System.out.println("** Server stopped. **");
 	}
 
 	@Override
@@ -38,11 +41,11 @@ public class ServerHandler implements Runnable
 	{
 		try
 		{
-			listening_socket.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), 8081));		
+			listening_socket.bind(listening_address);		
 			while(!listening_socket.isClosed())
 			{
 				Socket connection = listening_socket.accept();
-				thread_pool.execute(new ConnectionHandler(cwd, connection));
+				thread_pool.execute(new ConnectionHandler(current_working_dir, connection));
 			}
 		}
 		catch (SocketException e) { }

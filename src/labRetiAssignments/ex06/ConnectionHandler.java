@@ -2,25 +2,22 @@ package labRetiAssignments.ex06;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class ConnectionHandler implements Runnable
 {
 	private Socket socket;
 	private String cwd;
-	private BufferedReader character_reader;
-	private InputStream data_reader;
-	private Writer character_writer;
-	private OutputStream data_writer;
+	private BufferedReader reader;
+	private OutputStream writer;
 	
 	public ConnectionHandler(String current_working_directory, Socket socket) throws IOException
 	{
 		this.cwd = current_working_directory;
 		this.socket = socket;
-		this.data_reader = new BufferedInputStream(new DataInputStream( socket.getInputStream() ));
-		this.character_reader = new BufferedReader(new InputStreamReader( this.data_reader ));		
-		this.data_writer = new BufferedOutputStream (new DataOutputStream ( socket.getOutputStream() ));		
-		this.character_writer = new OutputStreamWriter( this.data_writer );
+		this.reader = new BufferedReader(new InputStreamReader( socket.getInputStream() ));	
+		this.writer = new DataOutputStream(new BufferedOutputStream( socket.getOutputStream() ));
 	}
 	
 	@Override
@@ -28,11 +25,48 @@ public class ConnectionHandler implements Runnable
 	{
 		try
 		{
-			System.out.println("Connection from: " + socket.getInetAddress().getHostAddress());
-			List<String> data = getRequest();
-			System.out.println(data);
-			HTTPRequest request = new HTTPRequest(data);
-			
+			notifyNewConnection();
+			handleRequest(getRequest());
+			notifyCloseConnection();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private HTTPRequest getRequest() throws IOException
+	{
+		List<String> requestLines = new LinkedList<String>();
+		String line = reader.readLine();
+		while(line != null && !line.isEmpty())
+		{
+			requestLines.add(line);
+			line = reader.readLine();
+		}
+		
+		return new HTTPRequest(requestLines);
+	}
+	
+	private void notifyNewConnection()
+	{
+		synchronized(System.out.getClass())
+		{
+			System.out.println("** \'" + Thread.currentThread().getName() + "\' Connection from: " + socket.getInetAddress().getHostAddress() + " **");
+		}
+	}
+	
+	private void notifyCloseConnection()
+	{
+		synchronized(System.out.getClass())
+		{
+			System.out.println("** \'" + Thread.currentThread().getName() + "\' Connection closed with: " + socket.getInetAddress().getHostAddress() + " **");
+		}
+	}
+	
+	private void handleRequest(HTTPRequest request) throws IOException
+	{
+		if(request.isValidRequest())
+		{
 			if(request.isGetRequest())
 			{
 				handleGetRequest(request);
@@ -41,69 +75,95 @@ public class ConnectionHandler implements Runnable
 			{
 				sendNotImplemented();
 			}
-
-			System.out.println("Connection closed with: " + socket.getInetAddress().getHostAddress());
-			socket.close();
 		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	private List<String> getRequest() throws IOException
-	{
-		List<String> requestLines = new LinkedList<String>();
-		String line = character_reader.readLine();
-		while(line != null && !line.isEmpty())
+		else
 		{
-			requestLines.add(line);
-			line = character_reader.readLine();
+			sendBadRequest();
 		}
-		
-		return requestLines;
+		socket.close();
 	}
 	
 	private void handleGetRequest(HTTPRequest request) throws IOException
 	{
-		File file = getRequestedFile(request);
-		if(!file.exists())
+		try
+		{
+			File file = getRequestedFile(request);
+			validateFileAccepted(request, file);
+			byte[] file_data = readFile(file);
+			String message = buildMessage(200, "OK", file_data.length, getContentType(file));
+			
+			sendData(message.getBytes(StandardCharsets.UTF_8));
+			sendData(file_data);
+		}
+		catch(FileNotFoundException e)
+		{
 			sendFileNotFound();
-		
-		byte[] file_data = readAllFile(file);
-		String data_message =
-				"HTTP/1.1 200 OK\r\n"
-				+ "Accept-Ranges: bytes\r\n"
-				+ "Content-Length: " + file_data.length + "\r\n"
-				+ "Connection: close\r\n"
-				+ "Content-Type: " + getContentType(file) + "\r\n"
-				+ "\r\n";
-		
-		character_writer.write(data_message);
-		character_writer.flush();
-		data_writer.write(file_data);
-		data_writer.flush();
+		}
+		catch(IOException e)
+		{
+			sendFileNotFound();
+		}
+		catch(Exception e)
+		{
+			synchronized(System.err.getClass())
+			{
+				System.err.println("** \'" + Thread.currentThread().getName() + "\' Error in handling get request: " + e.getMessage());
+				e.printStackTrace();
+			}
+			sendGenericError();
+		}
 	}
 	
-	private File getRequestedFile(HTTPRequest request)
+	private void validateFileAccepted(HTTPRequest request, File file) throws FileNotFoundException
 	{
-		File file = new File(cwd + request.getRequestedFile());		
+		String type = getContentType(file);
+		List<String> requested_types = request.getRequestedTypes();
+		if(!requested_types.isEmpty() && (type == null || !requested_types.contains(type)))
+		{
+			throw new FileNotFoundException("Given file type is not accepted by the client.");
+		}
+	}
+	
+	private File getRequestedFile(HTTPRequest request) throws FileNotFoundException
+	{
+		File file = getFileFromFilename(request.getRequestedFile());
+		validateFileExistance(file);
+		return file;
+	}
+	
+	private File getFileFromFilename(String filename)
+	{
+		File file = new File(cwd + filename);		
 		if(file.isDirectory())
 		{
-			return new File(cwd + request.getRequestedFile() + "/index.html");
+			file = new File(cwd + filename + "/index.html");
+		}
+
+		return file;
+	}
+	
+	private void validateFileExistance(File file) throws FileNotFoundException
+	{
+		if(!file.exists())
+		{
+			throw new FileNotFoundException();
+		}
+	}
+	
+	private byte[] readFile(File file) throws IOException
+	{
+		if(file.length() <= Integer.MAX_VALUE)
+		{
+			BufferedInputStream reader = new BufferedInputStream(new FileInputStream(file));
+			byte[] data = new byte[(int)(file.length())];
+			reader.read(data);
+			reader.close();
+			return data;
 		}
 		else
 		{
-
-			return file;
+			throw new IOException("File size is too big");
 		}
-	}
-	
-	private byte[] readAllFile(File file) throws IOException
-	{
-		BufferedInputStream reader = new BufferedInputStream(new FileInputStream(file));
-		byte[] data = reader.readAllBytes();
-		reader.close();
-		return data;
 	}
 	
 	private String getContentType(File file)
@@ -118,31 +178,73 @@ public class ConnectionHandler implements Runnable
 			return "image/png";
 		if(file.getName().endsWith(".jpg"))
 			return "image/jpg";
+		if(file.getName().endsWith(".jpeg"))
+			return "image/jpg";
 		if(file.getName().endsWith(".gif"))
 			return "image/gif";
 		else
-			return "text/plain";
+			return null;
 	}
 	
 	private void sendNotImplemented() throws IOException
 	{
-		final String error_message =
-			"HTTP/1.1 501 Not Implemented\r\n"
-			+ "Connection: close\r\n"
-			+ "\r\n";
-		
-		character_writer.write(error_message);
-		character_writer.flush();
+		String error_message = buildMessage(501, "Not Implemented");
+		sendData(error_message.getBytes(StandardCharsets.UTF_8));
 	}
 	
 	private void sendFileNotFound() throws IOException
 	{
-		final String error_message =
-			"HTTP/1.1 404 Requested file not found\r\n"
-			+ "Connection: close\r\n"
-			+ "\r\n";
+		byte[] error_txt_message = "SORRY, FILE NOT FOUND!".getBytes(StandardCharsets.UTF_8);
+		String error_message = buildMessage(404, "Requested file not found", error_txt_message.length, "text/plain");		
+		sendData(error_message.getBytes(StandardCharsets.UTF_8));
+		sendData(error_txt_message);
+	}
+	
+	private void sendGenericError() throws IOException
+	{
+		String error_message = buildMessage(500, "Internal Server Error");
+		sendData(error_message.getBytes(StandardCharsets.UTF_8));
+	}
+	
+	private void sendBadRequest() throws IOException
+	{
+		String error_message = buildMessage(400, "Bad Request");
+		sendData(error_message.getBytes(StandardCharsets.UTF_8));
+	}
+	
+	private void sendData(byte[] data) throws IOException
+	{
+		writer.write(data, 0, data.length);
+		writer.flush();
+	}
+	
+	private String buildMessage(int response_code, String response_message)
+	{
+		return buildMessage(response_code, response_message, -1, null);
+	}
+	
+	private String buildMessage(int response_code, String response_message, int response_data_len, String response_data_type)
+	{
+		StringBuffer message = new StringBuffer("HTTP/1.1 " + response_code + " " + response_message + "\r\n");
 		
-		character_writer.write(error_message);
-		character_writer.flush();
+		if(response_data_len > 0)
+		{
+			message.append(
+				"Accept-Ranges: none\r\n" +
+				"Content-Length: " + response_data_len + "\r\n"
+			);
+			
+			if(response_data_type != null)
+			{
+				message.append("Content-Type: " + response_data_type + "\r\n");
+			}
+		}
+		
+		message.append(
+			"Connection: close\r\n"
+			+ "\r\n"
+		);
+		
+		return message.toString();
 	}
 }

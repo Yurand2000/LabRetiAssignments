@@ -1,5 +1,7 @@
 package labRetiAssignments.ex06;
 
+import java.util.*;
+
 public class HTTPParser
 {
 	public static boolean isRequestLine(String line)
@@ -21,16 +23,42 @@ public class HTTPParser
 	
 	public static String getFileRequest(String line)
 	{
-		return line.substring(4, line.indexOf(' ', 4));
+		line = line.substring(4, line.indexOf(' ', 4));
+		int scheme_end = line.indexOf("://", 0);
+		if(scheme_end != -1)
+		{
+			int host_end = line.indexOf("/", scheme_end + 3);
+			return line.substring(host_end);
+		}
+		else
+		{
+			return line;
+		}
 	}
 	
-	public static boolean acceptsText(String line)
+	public static List<String> getAcceptedTypes(String line)
 	{
-		return line.contains("text/plain") || line.contains("text/html");
-	}
-	
-	public static boolean acceptsImages(String line)
-	{
-		return line.contains("image/png") || line.contains("image/jpg") || line.contains("image/gif");
+		List<String> list = new LinkedList<String>();
+		line = line.substring(8);
+		String[] accepted_types = line.split(", ");
+		String type = "";
+		for(String type_and_preference : accepted_types)
+		{
+			int end = type_and_preference.indexOf(';');
+			if(end > 0)
+			{
+				type = type_and_preference.substring(0, end - 1);
+			}
+			else
+			{
+				type = type_and_preference;
+			}
+			
+			if(type == "*/*")
+			{
+				return new LinkedList<String>();
+			}
+		}
+		return list;
 	}
 }
