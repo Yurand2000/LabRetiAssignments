@@ -2,5 +2,25 @@
 <classpath>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-annotations-2.13.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-annotations-2.13.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-core-2.13.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-core-2.13.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-databind-2.13.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-databind-2.13.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-datatype-jsr310-2.13.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/Yuri/Documents/gitDatabase/eclipse-workspace/jackson-datatype-jsr310-2.13.0-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
