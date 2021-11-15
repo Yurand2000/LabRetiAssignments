@@ -14,11 +14,10 @@ public class PingServer implements Runnable
 {
 	private DatagramSocket socket;
 	private InetAddress server_address;
-	private int server_port;
-	private int min_latency;
-	private int diff_latency;
-	private float loss_rate;
 	private Thread listener_thread;
+	
+	private int server_port, min_latency, diff_latency;
+	private float loss_rate;
 	
 	public PingServer(InetAddress address, int port, int min_latency, int max_latency, float loss_rate)
 	{
@@ -40,11 +39,7 @@ public class PingServer implements Runnable
 	
 	public void stopServer() throws InterruptedException
 	{
-		if(socket != null)
-		{
-			socket.close();
-		}
-
+		closeSocket();		
 		listener_thread.interrupt();
 		listener_thread.join();
 		System.out.println("Server Stopped");
@@ -55,39 +50,51 @@ public class PingServer implements Runnable
 	{
 		try
 		{
-			socket = new DatagramSocket(server_port, server_address);
-			
+			openSocket();
 			while(!Thread.currentThread().isInterrupted())
 			{
-				listenAndEcho();
+				listenOneMessageAndEcho();
 			}
-			
-			socket.close();
+			closeSocket();
 		}
 		catch (Exception e)
 		{
-			socket.close();
+			closeSocket();
 			e.printStackTrace();
 		}
 	}
 	
-	private void listenAndEcho() throws IOException
+	private void openSocket() throws SocketException
+	{
+		socket = new DatagramSocket(server_port, server_address);
+	}
+	
+	private void closeSocket()
+	{
+		if(socket != null)
+		{
+			socket.close();
+			socket = null;
+		}
+	}
+	
+	private void listenOneMessageAndEcho() throws IOException
 	{
 		try
 		{
-			DatagramPacket ping = PingFactory.instance().makeNewResponseReceiver();
+			DatagramPacket ping = PingFactory.makeNewResponsePacket();
 			socket.receive(ping);
 			
-			if(!doDiscard())
+			if(doDiscard())
+			{
+				printNonEchoedMessage(ping);
+			}
+			else
 			{
 				int delay = generateRandomDelay();
 				Thread.sleep(delay);
 				socket.send(ping);
 				printEchoedMessage(ping, delay);
-			}
-			else
-			{
-				printNonEchoedMessage(ping);
 			}
 			
 		}
@@ -107,13 +114,19 @@ public class PingServer implements Runnable
 	
 	private void printEchoedMessage(DatagramPacket ping, int delay)
 	{
-		byte[] data = Arrays.copyOf(ping.getData(), ping.getLength());
-		System.out.println("Received: [" + new String(data, StandardCharsets.UTF_8) + "] Action: delayed " + delay + " ms");
+		System.out.println(generatePartialPrintString(ping) + "delayed " + delay + " ms.");
 	}
 	
 	private void printNonEchoedMessage(DatagramPacket ping)
 	{
-		byte[] data = Arrays.copyOf(ping.getData(), ping.getLength());
-		System.out.println("Received: [" + new String(data, StandardCharsets.UTF_8) + "] Action: not echoed");
+		System.out.println(generatePartialPrintString(ping) + "not echoed.");
+	}
+	
+	private String generatePartialPrintString(DatagramPacket ping)
+	{
+		return
+			"From: " + ping.getAddress().getHostAddress() + ":" + ping.getPort() + "; Received: [" +
+			new String(ping.getData(), 0, ping.getLength(), StandardCharsets.UTF_8)
+			+ "]; Action: ";
 	}
 }

@@ -1,6 +1,5 @@
 package labRetiAssignments.ex07.client;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -12,19 +11,10 @@ public class MainClass
 	
 	public static void main(String[] args)
 	{
-		if(!areArgumentsValid(args))
-		{
-			return;
-		}
-		
-		try
+		if(areArgumentsValid(args))
 		{
 			PingClient client = new PingClient(server_address, server_port);
-			client.sendPings(number_of_pings);
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
+			client.ping(number_of_pings);
 		}
 	}
 

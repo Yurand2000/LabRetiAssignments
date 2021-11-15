@@ -12,6 +12,7 @@ import java.time.Instant;
 public class PingDatagram
 {
 	int sequence_number;
+	boolean received_response;
 	DatagramPacket ping_datagram;
 	DatagramPacket echo_datagram;
 	Instant ping_message_time;
@@ -20,20 +21,22 @@ public class PingDatagram
 	public PingDatagram(int sequence_number)
 	{
 		this.sequence_number = sequence_number;
+		this.received_response = false;
 	}
 	
-	public boolean trySendAndWaitForResponse(DatagramSocket socket, InetAddress address, int port) throws IOException
+	public void trySendAndWaitForResponse(DatagramSocket socket, InetAddress address, int port) throws IOException
 	{
+		received_response = false;
 		try
 		{
 			sendAndWaitForResponse(socket, address, port);
+			received_response = true;
+			
 			printSuccessfulPing();
-			return true;
 		}
 		catch(SocketTimeoutException e)
 		{
 			printFailedPing();
-			return false;
 		}
 		catch(Exception e)
 		{
@@ -41,13 +44,25 @@ public class PingDatagram
 		}
 	}
 	
+	public boolean receivedResponse()
+	{
+		return received_response;
+	}
+	
 	public long getRoundTripTimeMillis()
 	{
-		return echo_message_time.toEpochMilli() - ping_message_time.toEpochMilli();
+		if(received_response)
+		{
+			return echo_message_time.toEpochMilli() - ping_message_time.toEpochMilli();
+		}
+		else
+		{
+			throw new IllegalStateException();
+		}
 	}
 	
 	private void sendAndWaitForResponse(DatagramSocket socket, InetAddress address, int port)
-			throws IOException, SocketTimeoutException
+		throws IOException, SocketTimeoutException
 	{
 		send(socket, address, port);
 		receive(socket);
@@ -60,7 +75,7 @@ public class PingDatagram
 	private void send(DatagramSocket socket, InetAddress address, int port) throws IOException
 	{
 		ping_message_time = Instant.now(); 
-		ping_datagram = PingFactory.instance().makeNewPing(sequence_number, ping_message_time);
+		ping_datagram = PingFactory.makeNewPingPacket(sequence_number, ping_message_time);
 		ping_datagram.setAddress(address);
 		ping_datagram.setPort(port);
 		socket.send(ping_datagram);
@@ -68,7 +83,7 @@ public class PingDatagram
 	
 	private void receive(DatagramSocket socket) throws IOException, SocketTimeoutException
 	{
-		echo_datagram = PingFactory.instance().makeNewResponseReceiver();
+		echo_datagram = PingFactory.makeNewResponsePacket();
 		socket.receive(echo_datagram);
 		echo_message_time = Instant.now();
 	}
@@ -92,14 +107,17 @@ public class PingDatagram
 	
 	private void printSuccessfulPing()
 	{
-		System.out.println("Ping #" + sequence_number + ", Data: ["
-			+ new String(ping_datagram.getData(), StandardCharsets.UTF_8)
-			+ "], RTT: " + getRoundTripTimeMillis());
+		System.out.println(generatePartialPrintString() + getRoundTripTimeMillis());
 	}
 	
 	private void printFailedPing()
 	{
-		System.out.println("Ping #" + sequence_number + ", Data: ["
-			+ new String(ping_datagram.getData(), StandardCharsets.UTF_8) + "], RTT: *");
+		System.out.println(generatePartialPrintString() + "*");
+	}
+	
+	private String generatePartialPrintString()
+	{
+		return "Ping #" + sequence_number +
+			"; Data: [" + new String(ping_datagram.getData(), 0, ping_datagram.getLength(), StandardCharsets.UTF_8) + "]; RTT: ";
 	}
 }

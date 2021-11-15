@@ -17,38 +17,55 @@ public class PingClient
 	{
 		this.destination_address = destination_address;
 		this.destination_port = destination_port;
-		resetStatistics();
+		this.socket = null;
 	}
 	
-	public void sendPings(int number_of_pings) throws IOException
+	public void ping(int number_of_pings)
 	{
 		try
 		{
-			socket = new DatagramSocket();
-			socket.setSoTimeout(timeout);
+			resetStatistics();
 			
-			for(int i = 0; i < number_of_pings; i++)
-			{
-				PingDatagram ping = new PingDatagram(i);
-				if(ping.trySendAndWaitForResponse(socket, destination_address, destination_port))
-				{
-					long rtt = ping.getRoundTripTimeMillis();
-					updateRTTStatistics(rtt);
-					received_echos++;
-				}
-				sent_pings++;
-			}
-			
-			socket.close();
+			setupSocket();
+			sendPings(number_of_pings);
+			closeSocket();
 			
 			printStatistics();
-			resetStatistics();
 		}
 		catch(Exception e)
 		{
-			socket.close();
-			throw e;
+			e.printStackTrace();
+			closeSocket();
 		}
+	}
+	
+	private void setupSocket() throws SocketException
+	{
+		socket = new DatagramSocket();
+		socket.setSoTimeout(timeout);
+	}
+	
+	private void sendPings(int number_of_pings) throws IOException
+	{
+		for(int i = 0; i < number_of_pings; i++)
+		{
+			PingDatagram ping = new PingDatagram(i);
+			
+			ping.trySendAndWaitForResponse(socket, destination_address, destination_port);
+			sent_pings++;
+			
+			if(ping.receivedResponse())
+			{
+				updateRTTStatistics(ping.getRoundTripTimeMillis());
+				received_echos++;
+			}
+		}
+	}
+	
+	private void closeSocket()
+	{
+		socket.close();
+		socket = null;
 	}
 	
 	private void updateRTTStatistics(long new_message_rtt)

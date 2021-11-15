@@ -12,16 +12,16 @@ public class MainClass
 	
 	public static void main(String[] args) throws InterruptedException, IOException
 	{
-		if(!areArgumentsValid(args))
+		if(areArgumentsValid(args))
 		{
-			return;
-		}
-		
-		PingServer server = new PingServer(InetAddress.getLoopbackAddress(), server_port, min_latency, max_latency, loss_rate);
-		server.startServer();
-		
-		System.in.read();
-		server.stopServer();
+			PingServer server = new PingServer(
+				InetAddress.getLoopbackAddress(), server_port, min_latency, max_latency, loss_rate);
+			
+			server.startServer();
+			
+			System.in.read();
+			server.stopServer();
+		}		
 	}
 
 	private static boolean areArgumentsValid(String[] args)

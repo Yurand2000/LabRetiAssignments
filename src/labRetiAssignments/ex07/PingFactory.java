@@ -5,17 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 
 public class PingFactory
-{
-	private static PingFactory instance = new PingFactory();
-	
-	private PingFactory() { }
-	
-	public static PingFactory instance()
-	{
-		return instance;
-	}
-	
-	public DatagramPacket makeNewPing(int sequence_number, Instant timestamp)
+{	
+	public static DatagramPacket makeNewPingPacket(int sequence_number, Instant timestamp)
 	{
 		StringBuilder ping_msg = new StringBuilder("PING ");
 		ping_msg.append(sequence_number);
@@ -27,7 +18,7 @@ public class PingFactory
 		return ping;
 	}
 	
-	public DatagramPacket makeNewResponseReceiver()
+	public static DatagramPacket makeNewResponsePacket()
 	{
 		byte[] data = new byte[256];
 		DatagramPacket response = new DatagramPacket(data, data.length);
