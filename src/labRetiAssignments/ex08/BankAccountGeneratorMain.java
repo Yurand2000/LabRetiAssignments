@@ -1,11 +1,16 @@
 package labRetiAssignments.ex08;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BankAccountGeneratorMain
 {
@@ -25,7 +30,20 @@ public class BankAccountGeneratorMain
 		List<BankAccount> random_accounts = generateRandomAccountList(generator);
 		byte[] bank_account_data = SerializerWrapper.serialize(random_accounts);
 		
-		
+		try
+		{
+			FileChannel file = FileChannel.open(Paths.get(args[0] + "/bankAccounts.json"), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+			ByteBuffer buffer = ByteBuffer.wrap(bank_account_data);
+			file.write(buffer);
+			file.close();
+
+			System.out.println("Successfully generated the bankAccounts.json file.");
+		}
+		catch(FileAlreadyExistsException e)
+		{
+			System.out.println("Can't generate a bankAccounts.json file, file already exists.");
+			System.out.println("To overwrite first delete the file then run the program again.");
+		}
 	}
 	
 	private static List<BankAccount> generateRandomAccountList(NameGenerator generator)

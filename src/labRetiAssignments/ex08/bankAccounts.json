@@ -1,0 +1,70 @@
+[ {
+  "account_holder" : "Allie Marcelle",
+  "movements" : [ {
+    "reason" : "Bonifico",
+    "timestamp" : "2020-11-18T06:41:03.550Z"
+  }, {
+    "reason" : "Bonifico",
+    "timestamp" : "2020-01-09T15:38:40.269Z"
+  }, {
+    "reason" : "Accredito",
+    "timestamp" : "2021-04-10T15:30:45.639Z"
+  }, {
+    "reason" : "Accredito",
+    "timestamp" : "2021-08-08T15:54:54.116Z"
+  } ]
+}, {
+  "account_holder" : "Layla Evelyn",
+  "movements" : [ {
+    "reason" : "Bonifico",
+    "timestamp" : "2020-06-04T19:08:14.045Z"
+  }, {
+    "reason" : "Accredito",
+    "timestamp" : "2020-01-14T13:50:36.987Z"
+  }, {
+    "reason" : "PagoBancomat",
+    "timestamp" : "2020-12-12T22:04:45.213Z"
+  } ]
+}, {
+  "account_holder" : "Macy Jaylinn",
+  "movements" : [ {
+    "reason" : "Bollettino",
+    "timestamp" : "2020-11-24T19:31:20.889Z"
+  }, {
+    "reason" : "Accredito",
+    "timestamp" : "2021-05-29T16:07:53.160Z"
+  }, {
+    "reason" : "Bonifico",
+    "timestamp" : "2021-04-09T13:28:32.185Z"
+  } ]
+}, {
+  "account_holder" : "Grainne Clara",
+  "movements" : [ {
+    "reason" : "Bonifico",
+    "timestamp" : "2021-07-14T07:28:19.559Z"
+  }, {
+    "reason" : "F24",
+    "timestamp" : "2020-12-18T04:32:22.348Z"
+  }, {
+    "reason" : "PagoBancomat",
+    "timestamp" : "2020-03-26T04:49:15.166Z"
+  }, {
+    "reason" : "PagoBancomat",
+    "timestamp" : "2021-05-04T16:55:07.262Z"
+  } ]
+}, {
+  "account_holder" : "Claris Evelina",
+  "movements" : [ {
+    "reason" : "Bonifico",
+    "timestamp" : "2020-04-19T12:02:18.167Z"
+  }, {
+    "reason" : "F24",
+    "timestamp" : "2021-09-20T21:58:02.373Z"
+  }, {
+    "reason" : "PagoBancomat",
+    "timestamp" : "2020-06-15T15:39:05.222Z"
+  }, {
+    "reason" : "Bonifico",
+    "timestamp" : "2021-08-09T16:03:07.311Z"
+  } ]
+} ]

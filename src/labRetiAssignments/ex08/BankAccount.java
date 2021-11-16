@@ -5,8 +5,8 @@ import java.util.List;
 
 public class BankAccount
 {
-	private String account_holder;
-	private List<BankMovement> movements;
+	public final String account_holder;
+	public final List<BankMovement> movements;
 	
 	public BankAccount()
 	{
@@ -20,13 +20,18 @@ public class BankAccount
 		this.movements = new LinkedList<BankMovement>(movements);
 	}
 	
-	public String getAccountHolder()
+	@Override
+	public String toString()
 	{
-		return account_holder;
-	}
-	
-	public List<BankMovement> getMovements()
-	{
-		return movements;
+		StringBuilder builder = new StringBuilder("BankAccount: " + account_holder + ". Movements:\n* ");
+		for(int i = 0; i < movements.size(); i++)
+		{
+			builder.append(movements.get(i));
+			if(i != movements.size() - 1)
+			{
+				builder.append("\n* ");
+			}
+		}
+		return builder.toString();
 	}
 }

@@ -4,8 +4,8 @@ import java.time.Instant;
 
 public class BankMovement
 {
-	private BankMovementReason reason;
-	private Instant timestamp;
+	public final BankMovementReason reason;
+	public final Instant timestamp;
 	
 	public BankMovement()
 	{
@@ -19,13 +19,9 @@ public class BankMovement
 		this.timestamp = timestamp;
 	}
 	
-	public BankMovementReason getReason()
+	@Override
+	public String toString()
 	{
-		return reason;
-	}
-	
-	public Instant getTimestamp()
-	{
-		return timestamp;
+		return "{" + reason.toString() + "; " + timestamp.toString() + "}";
 	}
 }
