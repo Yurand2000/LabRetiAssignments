@@ -1,98 +1,98 @@
 package labRetiAssignments.ex08;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.Paths;
 
 public class BankAccountGeneratorMain
 {
-	private static int generated_accounts_number = 5;
-	private static int generated_movements_min = 2;
-	private static int generated_movements_max = 5;
-	private static int generated_movements_diff = generated_movements_max - generated_movements_min;
+	private static int accounts_number = 100;
+	private static int movements_min = 10;
+	private static int movements_max = 250;
+	private static String bank_account_file_name = "bankAccounts.json";
 	
 	public static void main(String[] args) throws IOException
 	{
-		if(args.length != 1)
-			throw new RuntimeException();
+		if(!areArgumentsValid(args))
+		{
+			return;
+		}		
 		
-		byte[] name_file_data = Files.readAllBytes(Paths.get(args[0] + "/names.json"));
-		NameGenerator generator = new NameGenerator(name_file_data);
-
-		List<BankAccount> random_accounts = generateRandomAccountList(generator);
-		byte[] bank_account_data = SerializerWrapper.serialize(random_accounts);
-		
+		String bank_account_file_path = getBankAccountFilePath(args);
+		NameGenerator name_generator = new NameGenerator(getNamesFilePath(args));		
+		BankAccountGenerator generator = new BankAccountGenerator(name_generator, accounts_number, movements_min, movements_max);		
+		writeDataToNewFile(bank_account_file_path, generator.generateAndSerialize());
+	}
+	
+	private static void writeDataToNewFile(String path, byte[] data) throws IOException
+	{
 		try
 		{
-			FileChannel file = FileChannel.open(Paths.get(args[0] + "/bankAccounts.json"), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-			ByteBuffer buffer = ByteBuffer.wrap(bank_account_data);
-			file.write(buffer);
+			FileChannel file = FileChannel.open(Paths.get(path), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+			ByteBuffer buffer = ByteBuffer.wrap(data);
+			while(buffer.hasRemaining())
+			{
+				file.write(buffer);
+			}
 			file.close();
 
-			System.out.println("Successfully generated the bankAccounts.json file.");
+			System.out.println("Successfully generated the " + bank_account_file_name + " file.");
 		}
 		catch(FileAlreadyExistsException e)
 		{
-			System.out.println("Can't generate a bankAccounts.json file, file already exists.");
-			System.out.println("To overwrite first delete the file then run the program again.");
+			e.printStackTrace();
 		}
 	}
 	
-	private static List<BankAccount> generateRandomAccountList(NameGenerator generator)
+	private static boolean areArgumentsValid(String[] args)
 	{
-		List<BankAccount> random_accounts = new ArrayList<BankAccount>();
-		for(int i = 0; i < generated_accounts_number; i++)
+		if(args.length != 1)
 		{
-			random_accounts.add(generateRandomAccount(generator));
+			System.out.println("Expected only one argument: working directory.");
+			return false;
 		}
-		return random_accounts;
-	}
-	
-	private static BankAccount generateRandomAccount(NameGenerator generator)
-	{
-		List<BankMovement> random_movements = new ArrayList<BankMovement>();
-		int movements_number = (int)((Math.random() * generated_movements_diff) + generated_movements_min);
-		for(int j = 0; j < movements_number; j++)
+
+		File directory = new File(args[0]);
+		if(!directory.exists())
 		{
-			random_movements.add(generateRandomMovement());
+			System.out.println("Given directory does not exist.");
+			return false;
+		}
+		if(!directory.isDirectory())
+		{
+			System.out.println("Given path is not a directory.");
+			return false;
 		}
 		
-		return new BankAccount(generator.getRandomName(), random_movements);
-	}
-	
-	private static BankMovement generateRandomMovement()
-	{
-		return new BankMovement(
-			getRandomReason(),
-			getRandomPointInTime());
-	}
-	
-	private static BankMovementReason getRandomReason()
-	{
-		BankMovementReason[] values = BankMovementReason.values();	
+		File names_file = new File(getNamesFilePath(args));
+		if(!names_file.exists())
+		{
+			System.out.println("Default names file does not exist. The names file name is \"names.json\".");
+			return false;
+		}
 		
-		BankMovementReason reason = null;
-		do { reason = values[(int)(Math.random() * values.length)]; }
-		while(reason == BankMovementReason.InvalidReason);
-		return reason;
+		File file = new File(getBankAccountFilePath(args));
+		if(file.exists())
+		{
+			System.out.println("Can't generate the " + bank_account_file_name + " file, file already exists.");
+			System.out.println("To overwrite first delete the file manually then run the program again.");
+			return false;
+		}
+		
+		return true;
 	}
 	
-	private static Instant getRandomPointInTime()
+	private static String getNamesFilePath(String[] args)
 	{
-		return Instant.now()
-			.minus((long) (Math.random() * 1000), ChronoUnit.MILLIS)
-			.minus((long) (Math.random() * 60), ChronoUnit.SECONDS)
-			.minus((long) (Math.random() * 60), ChronoUnit.MINUTES)
-			.minus((long) (Math.random() * 24), ChronoUnit.HOURS)
-			.minus((long) (Math.random() * 31), ChronoUnit.DAYS)
-			.minus((long) (Math.random() * 24) * 31, ChronoUnit.DAYS);
+		return args[0] + "/names.json";
+	}
+	
+	private static String getBankAccountFilePath(String[] args)
+	{
+		return args[0] + '/' + bank_account_file_name;
 	}
 }

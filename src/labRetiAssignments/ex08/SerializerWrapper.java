@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -29,8 +30,13 @@ public class SerializerWrapper
 		return getMapper().writeValueAsBytes(obj);		
 	}
 	
-	public static <T> T deserialize(byte[] data, Class<T> data_class) throws StreamReadException, DatabindException, IOException
+	public static <T> T deserialize(byte[] data) throws StreamReadException, DatabindException, IOException
 	{
-		return getMapper().readValue(data, data_class);
+		return getMapper().readValue(data, new TypeReference<T>(){});
+	}
+	
+	public static <T> T deserializeArray(byte[] data, Class<T> arrayClass) throws StreamReadException, DatabindException, IOException
+	{
+		return getMapper().readValue(data, arrayClass);
 	}
 }

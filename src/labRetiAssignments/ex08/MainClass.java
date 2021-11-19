@@ -1,35 +1,56 @@
 package labRetiAssignments.ex08;
 
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
-public class MainClass {
-
+public class MainClass
+{
+	private static String bank_account_file_name = "bankAccounts.json";
+	
 	public static void main(String[] args) throws IOException, InterruptedException
 	{
-		if(args.length != 1)
-			throw new RuntimeException();
-		
-		byte[] accounts_data = Files.readAllBytes(Paths.get(args[0] + "/bankAccounts.json"));
-		BankAccount[] accounts = SerializerWrapper.deserialize(accounts_data, BankAccount[].class);
-
-		Map<BankMovementReason, Integer> totalReasons = Collections.synchronizedMap(new TreeMap<BankMovementReason, Integer>());
-		ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
-		for(BankAccount account : accounts)
+		if(!areArgumentsValid(args))
 		{
-			pool.execute(new BankAccountTask(account, totalReasons));
+			return;
 		}
 		
-		pool.shutdown();		
-		pool.awaitTermination(10000, TimeUnit.DAYS);
+		Reader reader = new Reader(getBankAccountFilePath(args));
+		reader.readBankAccounts();
+		reader.printTotalReasons();
+	}
+	
+	private static boolean areArgumentsValid(String[] args)
+	{
+		if(args.length != 1)
+		{
+			System.out.println("Expected only one argument: working directory.");
+			return false;
+		}
+
+		File directory = new File(args[0]);
+		if(!directory.exists())
+		{
+			System.out.println("Given directory does not exist.");
+			return false;
+		}
+		if(!directory.isDirectory())
+		{
+			System.out.println("Given path is not a directory.");
+			return false;
+		}
 		
-		System.out.println(totalReasons);
+		File file = new File(getBankAccountFilePath(args));
+		if(!file.exists())
+		{
+			System.out.println("Bank account file: \"" + bank_account_file_name + "\" does not exist.");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	private static String getBankAccountFilePath(String[] args)
+	{
+		return args[0] + '/' + bank_account_file_name;
 	}
 }

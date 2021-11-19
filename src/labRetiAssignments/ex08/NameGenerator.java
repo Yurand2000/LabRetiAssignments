@@ -1,6 +1,8 @@
 package labRetiAssignments.ex08;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 import com.fasterxml.jackson.core.exc.StreamReadException;
@@ -8,25 +10,24 @@ import com.fasterxml.jackson.databind.DatabindException;
 
 public class NameGenerator
 {
-	private final ArrayList<String> names = new ArrayList<String>();
+	private List<String> names;
 	
-	public NameGenerator() { }
+	public NameGenerator(String path) throws StreamReadException, DatabindException, IOException
+	{
+		this( Files.readAllBytes(Paths.get(path)) );
+	}
 	
 	public NameGenerator(byte[] serialized_data) throws StreamReadException, DatabindException, IOException
 	{
-		String[] serialized_names = SerializerWrapper.deserialize(serialized_data, String[].class);
-		for(String name : serialized_names)
-		{
-			names.add(name);
-		}
+		names = SerializerWrapper.deserialize(serialized_data);
 	}
 	
 	public void addName(String name)
 	{
-		this.names.add(name);
+		names.add(name);
 	}
 	
-	public ArrayList<String> getNames()
+	public List<String> getNames()
 	{
 		return names;
 	}
@@ -39,7 +40,7 @@ public class NameGenerator
 		}
 		else
 		{
-			throw new ArrayIndexOutOfBoundsException();
+			throw new IllegalStateException("No names are saved into the generator");
 		}
 	}
 }

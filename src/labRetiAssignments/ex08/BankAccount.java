@@ -1,7 +1,7 @@
 package labRetiAssignments.ex08;
 
-import java.util.LinkedList;
 import java.util.List;
+import java.util.LinkedList;
 
 public class BankAccount
 {
