@@ -7,8 +7,8 @@ import java.util.Iterator;
 
 public class EchoServer implements Runnable
 {
-	private InetAddress address;
-	private int port;
+	private final InetAddress address;
+	private final int port;
 	
 	private ServerSocketChannel listening_socket;
 	private Selector selector;
@@ -24,54 +24,39 @@ public class EchoServer implements Runnable
 		this.server_thread = null;
 	}
 	
-	public void startServer()
+	public void startServer() throws IOException
 	{
+		listening_socket = ServerSocketChannel.open();
+		selector = Selector.open();
 		server_thread = new Thread(this);
 		server_thread.start();
 		
-		System.out.println("Server started...");
+		System.out.println("Server started. Press ENTER to stop.");
 	}
 	
 	public void stopServer() throws InterruptedException, IOException
 	{
-		System.out.println("Server stopping...");
+		System.out.println("Server stopping.");
 
 		server_thread.interrupt();
 		selector.wakeup();
-		
-		if(listening_socket != null)
-		{
-			listening_socket.close();
-			listening_socket = null;
-		}
-		
-		if(selector != null)
-		{
-			selector.close();
-			selector = null;
-		}
-		
+
+		listening_socket.close();
+		selector.close();
+
 		server_thread.join();
-		server_thread = null;		
+		listening_socket = null;
+		server_thread = null;
+		selector = null;
 	}
 
 	@Override
 	public void run()
 	{
-		setupServer();
-		selectLoop();
-	}
-	
-	private void setupServer()
-	{
 		try
 		{
-			listening_socket = ServerSocketChannel.open();
-			listening_socket.socket().bind(new InetSocketAddress(address, port));
-			listening_socket.configureBlocking(false);
-			
-			selector = Selector.open();
-			listening_socket.register(selector, SelectionKey.OP_ACCEPT);			
+			setupServer();
+			selectLoop();
 		}
 		catch (IOException e)
 		{
@@ -79,27 +64,27 @@ public class EchoServer implements Runnable
 		}
 	}
 	
-	private void selectLoop()
+	private void setupServer() throws IOException
 	{
-		try
+		listening_socket.socket().bind(new InetSocketAddress(address, port));
+		listening_socket.configureBlocking(false);		
+		listening_socket.register(selector, SelectionKey.OP_ACCEPT);
+	}
+	
+	private void selectLoop() throws IOException
+	{
+		while(!Thread.currentThread().isInterrupted())
 		{
-			while(!Thread.currentThread().isInterrupted())
+			int ready_keys = selector.select();
+			if(ready_keys != 0)
 			{
-				int ready_keys = selector.select();
-				if(ready_keys != 0)
+				Iterator<SelectionKey> keys_iterator = selector.selectedKeys().iterator();
+				while(keys_iterator.hasNext())
 				{
-					Iterator<SelectionKey> keys_iterator = selector.selectedKeys().iterator();
-					while(keys_iterator.hasNext())
-					{
-						tryExecuteIterator(keys_iterator.next());
-						keys_iterator.remove();
-					}
+					tryExecuteIterator(keys_iterator.next());
+					keys_iterator.remove();
 				}
 			}
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
 		}
 	}
 	
@@ -107,47 +92,47 @@ public class EchoServer implements Runnable
 	{
 		try
 		{
-			executeIterator(key);
+			if(key.isAcceptable())
+			{
+				executeAcceptableKey(key);
+			}
+			else
+			{
+				executeReadWriteKey(key);
+			}
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
-		}
-	}
-	
-	private void executeIterator(SelectionKey key) throws IOException
-	{
-		if(key.isAcceptable())
-		{
-			executeAcceptableKey(key);
-		}
-		else
-		{
-			try
-			{
-				EchoServerHandler handler = (EchoServerHandler)key.attachment();
-				if(key.isReadable())
-				{
-					handler.readOperation(key);
-				}
-				if(key.isWritable())
-				{
-					handler.writeOperation(key);
-				}
-			}
-			catch (IOException e)
-			{
-				SocketChannel channel = (SocketChannel)key.channel();
-				channel.close();
-			}
+			System.err.println("Error on handling client request: " + e.getMessage());
 		}
 	}
 	
 	private void executeAcceptableKey(SelectionKey key) throws IOException
 	{
-		SocketChannel new_channel = ((ServerSocketChannel)key.channel()).accept();
+		SocketChannel new_channel = listening_socket.accept();
 		new_channel.configureBlocking(false);
+		
 		SelectionKey new_key = new_channel.register(selector, SelectionKey.OP_READ);
 		new_key.attach(new EchoServerHandler(new_channel));
+	}
+	
+	private void executeReadWriteKey(SelectionKey key) throws IOException
+	{
+		try
+		{
+			EchoServerHandler handler = (EchoServerHandler)key.attachment();
+			if(key.isReadable())
+			{
+				handler.readOperation(key);
+			}
+			if(key.isWritable())
+			{
+				handler.writeOperation(key);
+			}
+		}
+		catch (IOException e)
+		{
+			key.channel().close();
+		}
 	}
 }

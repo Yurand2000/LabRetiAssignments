@@ -9,11 +9,11 @@ import java.nio.charset.StandardCharsets;
 
 public class EchoClient
 {
+	private final InetAddress address;
+	private final int port;
+	
 	private SocketChannel socket;
 	private ByteBuffer buffer;
-	
-	private InetAddress address;
-	private int port;
 
 	public EchoClient(InetAddress address, int port)
 	{
@@ -33,8 +33,8 @@ public class EchoClient
 	
 	public void sendAndReceive(String data) throws IOException
 	{
-		sendMessage(new Message(data.getBytes(StandardCharsets.UTF_8)));
-		System.out.println("RECEIVED: " + new String(readMessage().getData(), StandardCharsets.UTF_8));
+		sendMessage(data.getBytes(StandardCharsets.UTF_8));
+		displayMessage(readMessage());
 	}
 	
 	public void close() throws IOException
@@ -44,19 +44,24 @@ public class EchoClient
 		buffer = null;
 	}
 	
-	private void sendMessage(Message msg) throws IOException
+	private void sendMessage(byte[] msg) throws IOException
 	{
-		buffer.putInt(msg.getSize());
-		buffer.put(msg.getData());
+		buffer.putInt(msg.length);
+		buffer.put(msg);
 		buffer.flip();
 		socket.write(buffer);
 		buffer.clear();
 	}
 	
-	private Message readMessage() throws IOException
+	private byte[] readMessage() throws IOException
 	{
 		int size = readInt();
-		return new Message(readBytes(size));
+		return readBytes(size);
+	}
+	
+	private void displayMessage(byte[] data)
+	{
+		System.out.println("RECEIVED: " + new String(data, StandardCharsets.UTF_8));
 	}
 	
 	private int readInt() throws IOException
@@ -76,7 +81,7 @@ public class EchoClient
 		
 		buffer.flip();
 		buffer.get(data);
-		buffer.clear();
+		buffer.compact();
 		return data;
 	}
 	
