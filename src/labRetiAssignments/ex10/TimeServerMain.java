@@ -1,32 +1,42 @@
 package labRetiAssignments.ex10;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.net.UnknownHostException;
 
 public class TimeServerMain
 {
-	private static int sleep_time = 2000;
-	private static String multicast_address = "239.255.1.3";
-	private static int multicast_port = 8082;
+	private static InetAddress multicast_address;
+	private static int multicast_port;
 
 	public static void main(String[] args) throws IOException, InterruptedException
 	{
-		MulticastSocket s = new MulticastSocket();
-		s.setTimeToLive(1);
-		
-		while(!Thread.currentThread().isInterrupted())
+		try
 		{
-			byte[] data = LocalDateTime.now().toString().getBytes(StandardCharsets.UTF_8);
-			DatagramPacket dp = new DatagramPacket(data, data.length, InetAddress.getByName(multicast_address), multicast_port);
-			s.send(dp);
-			Thread.sleep(sleep_time);
+			parseArgs(args);
+			
+			MulticastServer server = new MulticastServer(multicast_address, multicast_port);
+			server.startServer();
+			
+			System.in.read();
+			server.stopServer();
 		}
-		
-		s.close();
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 	}
 
+	private static void parseArgs(String[] args) throws UnknownHostException
+	{
+		if(args.length == 2)
+		{
+			multicast_address = InetAddress.getByName(args[0]);
+			multicast_port = Integer.parseInt(args[1]);
+		}
+		else
+		{
+			throw new IllegalArgumentException("Arguments are not two: you should enter IpAddress and Port of your multicast group.");
+		}
+	}
 }
