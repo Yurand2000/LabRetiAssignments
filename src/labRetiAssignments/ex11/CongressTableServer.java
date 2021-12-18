@@ -1,33 +1,58 @@
 package labRetiAssignments.ex11;
 
 import java.util.List;
+import java.util.Vector;
 import java.util.LinkedList;
 
 public class CongressTableServer extends CongressTable
 {
+	private static final long serialVersionUID = 1L;
 	private int max_speakers;
+	private int max_sessions;
+	private int max_days;
 	
-	public CongressTableServer(int sessions, int max_speakers)
+	public CongressTableServer(int days, int sessions, int max_speakers)
 	{
 		super();
 		
+		this.max_days = days;
+		this.max_sessions = sessions;
 		this.max_speakers = max_speakers;
-		for(int i = 0; i < sessions; i++)
+		generateTable();
+	}
+	
+	private void generateTable()
+	{
+		for(int i = 0; i < max_days; i++)
 		{
-			table.add(new LinkedList<String>());
+			Vector<List<String>> day = new Vector<List<String>>();
+			
+			for(int j = 0; j < max_sessions; j++)
+			{
+				day.add(new LinkedList<String>());
+			}
+			
+			table.add(day);
 		}
 	}
 	
-	public void addSpeaker(int session, String speaker)
+	public void addSpeaker(int day, int session_number, String speaker)
 	{
-		List<String> line = getLine(session);
-		if(line.size() < max_speakers)
+		List<String> session = getSession(day, session_number);
+		checkSpeakerCanBeAdded(session);
+		addSpeakerToSession(session, speaker);
+	}
+	
+	private void checkSpeakerCanBeAdded(List<String> session)
+	{
+		if(session.size() >= max_speakers)
 		{
-			line.add(speaker);
+			throw new MaxSpeakersException();
 		}
-		else
-		{
-			throw new RuntimeException("Can't have more speakers added to the requested session.");
-		}
+	}
+	
+	private void addSpeakerToSession(List<String> session, String speaker)
+	{
+		session.add(speaker);
 	}
 }

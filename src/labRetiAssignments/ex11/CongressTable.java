@@ -6,27 +6,38 @@ import java.util.*;
 public class CongressTable implements Serializable
 {
 	private static final long serialVersionUID = 1L;
-	protected final Vector<List<String>> table;
+	protected final Vector<Vector<List<String>>> table;
 	
 	public CongressTable()
 	{
-		table = new Vector<List<String>>();
+		table = new Vector<Vector<List<String>>>();
 	}
 	
-	public List<String> getSpeakers(int session)
+	public List<String> getSpeakers(int day, int session)
 	{
-		return Collections.unmodifiableList(getLine(session));
+		return Collections.unmodifiableList(getSession(day, session));
 	}
 	
-	protected List<String> getLine(int session)
+	protected List<String> getSession(int day, int session)
 	{
-		if(session >= 0 && session < table.size())
+		checkDay(day);
+		checkSessionForDay(day, session);
+		return table.get(day).get(session);
+	}
+	
+	private void checkDay(int day)
+	{
+		if( !(day >= 0 && day < table.size()) )
 		{
-			return table.get(session);
+			throw new InvalidDayException();
 		}
-		else
+	}
+	
+	private void checkSessionForDay(int day, int session)
+	{
+		if( !(session >= 0 && session < table.get(day).size()) )
 		{
-			throw new RuntimeException("Given session number is invalid.");
+			throw new InvalidSessionException();
 		}
 	}
 	
@@ -36,16 +47,53 @@ public class CongressTable implements Serializable
 		StringBuilder string = new StringBuilder();
 		for(int i = 0; i < table.size(); i++)
 		{
-			string.append("* Session ");
-			string.append(i);
-			string.append(": ");
-			List<String> line = table.get(i);
-			for(int j = 0; j < line.size(); j++)
-			{
-				string.append(line.get(j));
-				string.append("; ");
-			}
+			string.append("Day ");
+			string.append(i+1);
+			string.append(" sessions:\n");
+			string.append(indentString(dayTableToString(table.get(i))));
 			string.append('\n');
+		}
+		return string.toString();
+	}
+	
+	private String dayTableToString(Vector<List<String>> table)
+	{
+		StringBuilder string = new StringBuilder();
+		for(int i = 0; i < table.size(); i++)
+		{
+			List<String> session = table.get(i);
+			
+			string.append("S ");
+			string.append(i+1);
+			string.append("; Speakers: ");
+			string.append(session.size());
+			string.append(" -> ");
+			string.append(sessionLineToString(session));
+			string.append('\n');
+		}
+		return string.toString();
+	}
+	
+	private String sessionLineToString(List<String> table)
+	{
+		StringBuilder string = new StringBuilder();
+		for(int i = 0; i < table.size(); i++)
+		{
+			string.append(table.get(i));
+			string.append("; ");
+		}
+		return string.toString();
+	}
+	
+	private String indentString(String in)
+	{
+		String[] lines = in.split("\n");
+		StringBuilder string = new StringBuilder();
+		for(int i = 0; i < lines.length; i++)
+		{
+			string.append("  ");
+			string.append(lines[i]);
+			string.append("\n");
 		}
 		return string.toString();
 	}
